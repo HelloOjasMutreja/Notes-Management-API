@@ -1,3 +1,33 @@
-from django.shortcuts import render
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .models import User
+from .serializers import RegisterSerializer, UserSerializer
 
-# Create your views here.
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {"message": "Account created successfully.", "user": UserSerializer(user).data},
+            status=status.HTTP_201_CREATED,
+        )
+
+class LoginView(TokenObtainPairView):
+    permission_classes = [AllowAny]
+
+class RefreshView(TokenRefreshView):
+    permission_classes = [AllowAny]
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
